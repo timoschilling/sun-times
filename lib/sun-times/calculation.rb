@@ -19,7 +19,7 @@ module SunTimes
 
     def calculate
       # the sun never sets / rises on this location (on the specified date)
-      return nil unless SUN_SET_RISE_RANGE.cover? cos_local_hour_angle
+      return nil unless SUN_SET_RISE_RANGE.include? cos_local_hour_angle
 
       # RA
       tan_right_ascension = 0.91764 * Math.tan(degrees_to_radians(sun_true_longitude))
