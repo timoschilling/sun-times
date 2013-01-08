@@ -3,6 +3,8 @@ module SunTimes
     attr_accessor :event, :date, :latitude, :longitude, :options
     attr_accessor :zenith
 
+    SUN_SET_RISE_RANGE = -1..1
+
     def initialize(event, date, latitude, longitude, options = {})
       raise "Unknown event '#{ event }'" if KNOWN_EVENTS.find_index(event).nil?
 
@@ -16,21 +18,8 @@ module SunTimes
     end
 
     def calculate
-      longitude_hour = longitude / DEGREES_PER_HOUR
-
-      # t
-      base_time = event == :rise ? 6.0 : 18.0
-      approximate_time = date.yday + (base_time - longitude_hour) / 24.0
-
-      # M
-      mean_sun_anomaly = (0.9856 * approximate_time) - 3.289
-
-      # L
-      sun_true_longitude = mean_sun_anomaly +
-                          (1.916 * Math.sin(degrees_to_radians(mean_sun_anomaly))) +
-                          (0.020 * Math.sin(2 * degrees_to_radians(mean_sun_anomaly))) +
-                          282.634
-      sun_true_longitude = coerce_degrees(sun_true_longitude)
+      # the sun never sets / rises on this location (on the specified date)
+      return nil unless SUN_SET_RISE_RANGE.cover? cos_local_hour_angle
 
       # RA
       tan_right_ascension = 0.91764 * Math.tan(degrees_to_radians(sun_true_longitude))
@@ -44,26 +33,6 @@ module SunTimes
 
       # RA = RA / 15
       sun_right_ascension_hours = sun_right_ascension / DEGREES_PER_HOUR
-
-      sin_declination = 0.39782 * Math.sin(degrees_to_radians(sun_true_longitude))
-      cos_declination = Math.cos(Math.asin(sin_declination))
-
-      cos_local_hour_angle =
-        (Math.cos(degrees_to_radians(zenith)) - (sin_declination * Math.sin(degrees_to_radians(latitude)))) /
-        (cos_declination * Math.cos(degrees_to_radians(latitude)))
-
-      # the sun never rises on this location (on the specified date)
-      return nil if cos_local_hour_angle > 1
-      # the sun never sets on this location (on the specified date)
-      return nil if cos_local_hour_angle < -1
-
-      # H
-      suns_local_hour =
-        if event == :rise
-          360 - radians_to_degrees(Math.acos(cos_local_hour_angle))
-        else
-          radians_to_degrees(Math.acos(cos_local_hour_angle))
-        end
 
       # H = H / 15
       suns_local_hour_hours = suns_local_hour / DEGREES_PER_HOUR
@@ -104,6 +73,53 @@ module SunTimes
         return coerce_degrees(degrees)
       end
       degrees
+    end
+
+    def longitude_hour
+      longitude / DEGREES_PER_HOUR
+    end
+
+    # start time
+    def base_time
+      event == :rise ? 6.0 : 18.0
+    end
+
+    def approximate_time
+      date.yday + (base_time - longitude_hour) / 24.0
+    end
+    # end time
+
+    def mean_sun_anomaly
+      (0.9856 * approximate_time) - 3.289
+    end
+
+    def sun_true_longitude
+      degrees = mean_sun_anomaly +
+                (1.916 * Math.sin(degrees_to_radians(mean_sun_anomaly))) +
+                (0.020 * Math.sin(2 * degrees_to_radians(mean_sun_anomaly))) +
+                282.634
+      coerce_degrees(degrees)
+    end
+
+    def sin_declination
+      0.39782 * Math.sin(degrees_to_radians(sun_true_longitude))
+    end
+
+    def cos_declination
+      Math.cos(Math.asin(sin_declination))
+    end
+
+    def cos_local_hour_angle
+      (Math.cos(degrees_to_radians(zenith)) - (sin_declination * Math.sin(degrees_to_radians(latitude)))) /
+      (cos_declination * Math.cos(degrees_to_radians(latitude)))
+    end
+
+    def suns_local_hour
+      if event == :rise
+        360 - radians_to_degrees(Math.acos(cos_local_hour_angle))
+      else
+        radians_to_degrees(Math.acos(cos_local_hour_angle))
+      end
     end
   end
 end
