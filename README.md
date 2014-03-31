@@ -46,3 +46,7 @@ SunTimes.calculate(:set, Date.new(2010, 3, 8), 51.506318, 7.460659)  # => 2010-0
 ## License
 
 MIT License (see [LICENSE.txt](./LICENSE.txt))
+
+
+[![Bitdeli Badge](https://d2weczhvl823v0.cloudfront.net/timoschilling/sun-times/trend.png)](https://bitdeli.com/free "Bitdeli Badge")
+
